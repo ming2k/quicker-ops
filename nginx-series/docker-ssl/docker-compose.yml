@@ -1,0 +1,10 @@
+version: '3'
+services:
+  nginx:
+    build: .
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./ssl:/etc/nginx/ssl
+      - ./html:/usr/share/nginx/html
