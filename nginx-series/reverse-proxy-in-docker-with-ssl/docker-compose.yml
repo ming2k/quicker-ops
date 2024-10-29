@@ -1,9 +1,8 @@
-version: '3'
 services:
   nginx:
     build: .
+    network_mode: host
     ports:
-      - "80:80"
       - "443:443"
     volumes:
       - ./ssl:/etc/nginx/ssl
