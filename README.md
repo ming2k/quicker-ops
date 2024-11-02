@@ -1,14 +1,4 @@
+# Operations Toolkit
 
-## acme.sh
+This project is a collection of various tools and scripts designed to assist operations (ops) teams in maintenance tasks, ultimately saving time and improving efficiency. The toolkit aims to provide practical solutions for common operational challenges.
 
-Prerequist
-
-1. Make sure your host 80 port is not used
-
-```sh
-./acme.sh --domain example.com --email your-email@example.com
-```
-
-## Nginx Series
-
-[Demo in Docker with SSL](./nginx-series/demo-in-docker-with-ssl/README.md)
