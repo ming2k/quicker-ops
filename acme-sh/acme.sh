@@ -1,5 +1,4 @@
 #!/bin/bash
-
 # Initialize variables
 DOMAIN=""
 EMAIL=""
@@ -20,78 +19,66 @@ if [ -z "$DOMAIN" ] || [ -z "$EMAIL" ]; then
     exit 1
 fi
 
-# Check for root privileges
-if [ "$(id -u)" != "0" ]; then
-   echo "This script requires root privileges" 1>&2
-   exit 1
+# Create directories for certificates and acme.sh data
+CERT_DIR="/etc/ssl/${DOMAIN}"
+mkdir -p "$CERT_DIR"
+
+# Check if Docker is installed
+if ! command -v docker &> /dev/null; then
+    echo "Docker is not installed. Please install Docker first."
+    exit 1
 fi
 
-# Check and install socat
-if ! command -v socat &> /dev/null
-then
-    echo "socat is not installed. Installing..."
-    if [ -f /etc/debian_version ]; then
-        # Debian/Ubuntu systems
-        apt-get update
-        apt-get install -y socat
-    elif [ -f /etc/redhat-release ]; then
-        # CentOS/RHEL systems
-        yum install -y socat
-    else
-        echo "Unable to determine system type. Please install socat manually."
-        exit 1
-    fi
-fi
+# Pull the latest acme.sh image
+docker pull neilpang/acme.sh
 
-# Check if acme.sh is installed
-if [ -f "$HOME/.acme.sh/acme.sh" ]; then
-    ACME_CMD="$HOME/.acme.sh/acme.sh"
-else
-    echo "acme.sh is not installed. Installing..."
-    curl https://get.acme.sh | sh -s email=$EMAIL
-    source "$HOME/.acme.sh/acme.sh.env"
-    ACME_CMD="$HOME/.acme.sh/acme.sh"
-fi
-
-# Register account
-echo "Registering acme.sh account..."
-$ACME_CMD --register-account -m $EMAIL
-
-# Stop services that might be using port 80 (if any)
-# For example: service nginx stop
-
-# Generate certificate
+# Register account and generate certificate
 echo "Generating certificate for $DOMAIN..."
-$ACME_CMD --issue --force -d $DOMAIN --standalone
+docker run --rm \
+    -v "$CERT_DIR:/acme.sh/$DOMAIN" \
+    -e "DOMAIN=$DOMAIN" \
+    -e "EMAIL=$EMAIL" \
+    --net=host \
+    neilpang/acme.sh \
+    --issue \
+    --standalone \
+    -d "$DOMAIN" \
+    --server letsencrypt
 
 # Check if certificate generation was successful
 if [ $? -eq 0 ]; then
     echo "Certificate generated successfully!"
-
-    # Create directory for certificates
-    CERT_DIR="/etc/ssl/${DOMAIN}"
-    mkdir -p "$CERT_DIR"
-
-    # Install certificate
+    
+    # Install certificate using Docker
     echo "Installing certificate..."
-    $ACME_CMD --install-cert -d $DOMAIN \
-        --key-file       "${CERT_DIR}/private.key"  \
-        --fullchain-file "${CERT_DIR}/fullchain.pem"
-
+    docker run --rm \
+        -v "$CERT_DIR:/acme.sh/$DOMAIN" \
+        -e "DOMAIN=$DOMAIN" \
+        neilpang/acme.sh \
+        --install-cert \
+        -d "$DOMAIN" \
+        --key-file "/acme.sh/$DOMAIN/private.key" \
+        --fullchain-file "/acme.sh/$DOMAIN/fullchain.pem"
+    
     if [ $? -eq 0 ]; then
         echo "Certificate installed successfully!"
+        # Set appropriate permissions
+        chmod 644 "$CERT_DIR/fullchain.pem"
+        chmod 600 "$CERT_DIR/private.key"
     else
         echo "Certificate installation failed."
+        exit 1
     fi
 else
     echo "Certificate generation failed."
+    exit 1
 fi
 
 # Display certificate information
-$ACME_CMD --info -d $DOMAIN
-
-# Restart previously stopped services (if any)
-# For example: service nginx start
+docker run --rm \
+    -v "$CERT_DIR:/acme.sh/$DOMAIN" \
+    neilpang/acme.sh \
+    --info \
+    -d "$DOMAIN"
 
 echo "Script execution completed."
-

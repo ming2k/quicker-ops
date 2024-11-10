@@ -1,14 +1,8 @@
-
-## acme.sh
-
-Prerequist
-
-1. Make sure your host 80 port is not used
+> The script will use standalone mode to validate domain validation, make sure your host 80 port is available.
 
 ```sh
 ./acme.sh --domain example.com --email your-email@example.com
 ```
 
-## Nginx Series
+It will install pem in `/etc/ssl/${DOMAIN}`.
 
-[Demo in Docker with SSL](./nginx-series/demo-in-docker-with-ssl/README.md)
