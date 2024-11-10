@@ -6,6 +6,6 @@ This docker demo will help you quick start a website demo with ssl.
 
 3. copy your private key (e.g. `private.key`) to `ssl/privkey.pem`;
 
-4. Update the `nginx.conf`. for example, change the `sever_name`;
+4. Copy `nginx-tempate.conf` as the `nginx.conf`, update the config info;
 
 4. run `docker compose up -d`.
