@@ -22,13 +22,20 @@ case "$1" in
             bash -c "$(curl -L https://github.com/XTLS/Xray-install/raw/main/install-release.sh)" @ install
         fi
 
+        # Ensure assets directory exists
+        mkdir -p "$ASSETS_DIR"
+
         # List available config files and let user choose
         echo "Available config files:"
-        configs=($(ls "$ASSETS_DIR"/config*.json))
+        configs=($(find "$ASSETS_DIR" -name "config*.json" 2>/dev/null))
         if [ ${#configs[@]} -eq 0 ]; then
             echo "No config files found. Generating new configuration..."
-            python3 "$SCRIPT_DIR/gen_xray_config.py"
-            configs=($(ls "$ASSETS_DIR"/config*.json))
+            python3 "$SCRIPT_DIR/gen-xray-config.py"
+            configs=($(find "$ASSETS_DIR" -name "config*.json" 2>/dev/null))
+            if [ ${#configs[@]} -eq 0 ]; then
+                echo "Error: Failed to generate configuration files."
+                exit 1
+            fi
         fi
 
         PS3="Select a config file to use: "
@@ -49,7 +56,7 @@ case "$1" in
         fi
 
         echo "Stopping existing XRay service if it exists..."
-        systemctl stop xray 2>/dev/null
+        systemctl stop xray 2>/dev/null || true
 
         echo "Starting XRay service..."
         cp "$CONFIG_PATH" /usr/local/etc/xray/config.json
