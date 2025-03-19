@@ -1,17 +1,31 @@
 #!/bin/bash
 
 # Get the script's directory
-$(dirname "$(readlink -f "$0")")
 PROJECT_ROOT="$(dirname $(dirname "$(readlink -f "$0")"))"
 SCRIPT_DIR="$PROJECT_ROOT/scripts"
 ASSETS_DIR="$PROJECT_ROOT/assets"
-CONFIG_PATH="$ASSETS_DIR/xray_config/config.json"
 
-echo "Generating XRay configuration..."
-# Run the Python script to generate config
-python3 "$SCRIPT_DIR/gen_xray_config.py" "$CONFIG_PATH"
+# List available config files and let user choose
+echo "Available config files:"
+configs=($(ls "$ASSETS_DIR"/config*.json))
+if [ ${#configs[@]} -eq 0 ]; then
+    echo "No config files found. Generating new configuration..."
+    python3 "$SCRIPT_DIR/gen_xray_config.py"
+    configs=($(ls "$ASSETS_DIR"/config*.json))
+fi
 
-# Check if the config was generated successfully
+PS3="Select a config file to use: "
+select CONFIG_PATH in "${configs[@]}"; do
+    if [ -n "$CONFIG_PATH" ]; then
+        break
+    else
+        echo "Invalid selection. Please try again."
+    fi
+done
+
+echo "Using config file: $CONFIG_PATH"
+
+# Check if the config exists
 if [ ! -f "$CONFIG_PATH" ]; then
     echo "Error: Configuration file not found at $CONFIG_PATH"
     exit 1

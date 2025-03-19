@@ -4,9 +4,24 @@ import uuid
 import os
 import argparse
 import pathlib
+from datetime import datetime
+
+
+def get_container_runtime():
+    """Check if docker or podman is available and return the appropriate command"""
+    try:
+        subprocess.run(["docker", "--version"], capture_output=True, check=True)
+        return "docker"
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        try:
+            subprocess.run(["podman", "--version"], capture_output=True, check=True)
+            return "podman"
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            raise RuntimeError("Neither docker nor podman is available")
 
 def run_docker_command(command):
-    full_command = f"docker run --rm ghcr.io/xtls/xray-core {command}"
+    runtime = get_container_runtime()
+    full_command = f"{runtime} run --rm ghcr.io/xtls/xray-core {command}"
     result = subprocess.run(full_command, shell=True, capture_output=True, text=True)
     return result.stdout.strip()
 
@@ -26,7 +41,7 @@ def ensure_directory_exists(directory):
     """Create directory if it doesn't exist"""
     pathlib.Path(directory).mkdir(parents=True, exist_ok=True)
 
-def generate_config(output_path):
+def generate_config():
     print("Please choose how to generate UUID and privateKey:")
     print("1. Auto-generate")
     print("2. Manual input")
@@ -97,23 +112,34 @@ def generate_config(output_path):
         ]
     }
 
-    # Ensure the output directory exists
-    output_dir = os.path.dirname(output_path)
-    if output_dir:
-        ensure_directory_exists(output_dir)
+    # Get current timestamp
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    
+    # Get assets directory (parent dir of current file's parent dir)
+    assets_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets")
+    ensure_directory_exists(assets_dir)
+    
+    # Generate filename with timestamp
+    filename = f"config_{timestamp}.json"
+    config_path = os.path.join(assets_dir, filename)
+    
+    # Create symlink path
+    symlink_path = os.path.join(assets_dir, "config.json")
 
     # Write the config file
-    with open(output_path, 'w') as f:
+    with open(config_path, 'w') as f:
         json.dump(config, f, indent=4)
 
-    print(f"Configuration file has been generated at: {output_path}")
+    # Create or update symlink to latest config
+    if os.path.exists(symlink_path):
+        os.remove(symlink_path)
+    os.symlink(config_path, symlink_path)
+
+    print(f"Configuration file has been generated at: {config_path}")
+    print(f"Symlink created at: {symlink_path}")
     print(f"Client ID: {client_id}")
     print(f"Private Key: {private_key}")
     print(f"Public Key: {public_key}")
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Generate XRay configuration file')
-    parser.add_argument('output_path', help='Path where to save the config.json file')
-    
-    args = parser.parse_args()
-    generate_config(args.output_path)
+    generate_config()
