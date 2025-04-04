@@ -46,8 +46,15 @@ else
     ./acme.sh --install --home "$HOME/.acme.sh" --accountemail "$EMAIL"
 fi
 
+# Remove existing acme.sh certificates if they exist
+if [ -d "$HOME/.acme.sh/${DOMAIN}_ecc" ]; then
+    echo "Removing existing certificates for $DOMAIN..."
+    rm -rf "$HOME/.acme.sh/${DOMAIN}_ecc"
+fi
+
 # Generate certificates using standalone mode
-"$HOME/.acme.sh/acme.sh" --issue --standalone -d "$DOMAIN" --server letsencrypt --force
+"$HOME/.acme.sh/acme.sh" --issue --standalone -d "$DOMAIN" --server letsencrypt
+
 
 # Create target directory if it doesn't exist
 sudo mkdir -p /etc/ssl/certs
