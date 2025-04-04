@@ -47,7 +47,7 @@ else
 fi
 
 # Generate certificates using standalone mode
-"$HOME/.acme.sh/acme.sh" --issue --standalone -d "$DOMAIN" --server letsencrypt
+"$HOME/.acme.sh/acme.sh" --issue --standalone -d "$DOMAIN" --server letsencrypt --force
 
 # Create target directory if it doesn't exist
 sudo mkdir -p /etc/ssl/certs
